@@ -40,13 +40,19 @@ One geometric position; four tokens; the channel had to pick one.
 | Hook + capture + unembed, verified bit-exact against `model.forward()` | ✅ |
 | Finite-difference Jacobian through a quantised GGUF | ❌ **impossible** — [why](research-logs/2026-08-02_gguf_quantization_blocks_fd_jacobian.md) |
 | …through a dequantised one | ✅ `CANDLE_DEQUANTIZE_ALL=1`, textbook plateau across 27 blocks |
-| Do first-thought keys cluster by **subject**? | ❌ AUC ≈ 0.50, pre-registered gate, robustly |
-| Do they cluster by **stance**? | 🔬 one run says yes — **unreplicated** |
+| Do first-thought keys cluster by **subject**? | ⚠️ AUC 0.70 — real signal, **under our pre-registered 0.80 bar** |
+| Is the geometry organised at all? | ✅ yes, against a shuffled null, every metric |
+| Is it organised by *stance*? | 🔬 partly — mixed with subject, neither dominant |
 
-### The stance result, stated honestly
+### What the geometry is organised by — honestly
 
-Clustering mid-thought residuals with no labels at all, on 200 prompts (40 subjects × 8
-question forms), the clusters came out as *opening moves* rather than topics:
+Clustering mid-thought residuals with **no labels at all**, 200 prompts (40 subjects × 8
+question forms), the clusters separate cleanly against a per-dimension shuffled null
+(effective dim 22.8 vs 109.3; silhouette 0.19 vs -0.07; structure survives on a held-out
+half). So there *is* structure.
+
+What it corresponds to is less tidy than it first looked. Some clusters are pure opening
+move — unrelated subjects, one stance:
 
 ```
 cluster 2   "teach desert ecology to a beginner, I would use a **"
@@ -58,13 +64,30 @@ cluster 5   "its simplest, **Garbage Collection (GC)** is an"
             "its simplest level, a **supply chain** is the entire"
 ```
 
-Unrelated subjects, one stance each. That is the hypothesis this repo exists to test.
+But others are pure *subject* — one cluster was five prompts all about the Silk Road. And
+the numbers say the mixture is roughly even. Normalised mutual information between clusters
+and each labelling, adjusted for what k=8 clusters can achieve (subject caps at 0.72, form
+at 1.0):
 
-**Caveats we'd want a reader to have before they believe it:** one model, one corpus, n=200,
-single run. Gemma 4 is unusual (thinking-channel format, √d embedding scale, BOS-sensitive)
-so this may be a Gemma fact rather than a language-model fact. The continuation-agreement
-metric is partly circular under greedy decode. Replication on a second model and corpus is
-the next thing, not a footnote.
+| layer | form | subject |
+|---|---:|---:|
+| L24 | 0.308 | 0.362 |
+| L36 | 0.360 | 0.345 |
+| L44 | 0.322 | 0.328 |
+
+Form explains ~36% of achievable, subject ~48%. **Neither dominates.** An earlier draft of
+this README claimed the clusters were stances; the exemplars looked that way because we
+printed the first three members of each. The numbers don't support the clean version.
+
+Separately, a pre-registered gate asking directly *do same-subject prompts key together*
+gives **AUC 0.70** at the first thought token — well above chance, below our 0.80 bar, so it
+is recorded as a fail. It decays with depth (0.70 → 0.61 → 0.58 at 0, 2, 8 tokens in), which
+says the subject signal is sharpest the instant the thought opens.
+
+**Caveats a reader should have:** one model, one corpus, n=200, single run. Gemma 4 is
+unusual (thinking-channel format, √d embedding scale, BOS-sensitive) so this may be a Gemma
+fact rather than a language-model fact. The continuation-agreement metric is partly circular
+under greedy decode. Replication on a second model is the next thing, not a footnote.
 
 ## Things that fell out along the way
 

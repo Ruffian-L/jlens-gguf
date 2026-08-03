@@ -438,3 +438,38 @@ within the band, at cost × n_bands. `paper` remains the default and reproduces 
 `gemma-4-12b-it-Q4_K_M.gguf` (dense) confirmed as first target. `gemma4.rs` has no expert/MoE
 handling at all, so the A4B checkpoints in `~/models` cannot load through it regardless of the
 routing-smoothness concern.
+
+---
+
+## 2026-08-02 (late) — both earlier headline results were the BOS bug
+
+`research-logs/2026-08-02_gemma4_missing_bos.md` invalidated the inputs to every
+chat-templated run. Re-ran the two that mattered.
+
+### Subject gate: 0.50 → 0.70
+
+Same pre-registered protocol, same null, prompts the model can actually read:
+
+| depth | L24 | L36 | L44 |
+|---|---:|---:|---:|
+| N=0 | **0.7042** | 0.6341 | 0.6377 |
+| N=2 | 0.6138 | 0.6082 | 0.5936 |
+| N=8 | 0.5775 | 0.5995 | 0.5795 |
+
+Real signal, clearly above chance. **Still recorded as FAIL** — the pre-registered bar is
+0.80 and it is not moving after the fact.
+
+The shape is the interesting part: subject is sharpest at the **first** thought token and
+decays with depth. We had assumed the opposite — that a thought needs to unfold before it
+commits to a topic. It appears to commit immediately and then diffuse.
+
+### Stance claim retracted
+
+The unsupervised clusters were called "stances" on the strength of their exemplars. NMI says
+otherwise — form 0.31–0.36, subject 0.33–0.36, and adjusted for what k=8 can achieve
+(subject caps at 0.72) subject explains *more*. One cluster was five Silk Road prompts, i.e.
+pure subject, and it was glossed over because only the first three members of each cluster
+were printed.
+
+Structure is real (all four metrics beat a shuffled null). What it is organised by is a
+mixture of topic and opening move, neither dominant. The clean version was wrong.
