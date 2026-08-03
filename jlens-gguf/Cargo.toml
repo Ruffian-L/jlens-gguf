@@ -1,0 +1,29 @@
+[package]
+name = "jlens-gguf"
+version = "0.1.0"
+edition = "2021"
+description = "Jacobian lens for GGUF models — forward-mode fit over hydro's loader"
+license = "MIT-0"
+
+[features]
+# Mirror the host crate's feature wiring: CUDA is on by default, and turning it off here
+# must also turn it off for `gguf-hooks` or the two disagree about the device.
+default = ["with-cuda"]
+with-cuda = ["gguf-hooks/with-cuda"]
+with-metal = ["gguf-hooks/with-metal"]
+
+[dependencies]
+gguf-hooks = { path = "../gguf-hooks", default-features = false }
+candle-core = "0.9"
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+safetensors = "0.7"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokenizers = "0.22"
+rand = { version = "0.10", features = ["std", "thread_rng"] }
+tracing = "0.1"
+
+[[bin]]
+name = "jlens-gguf"
+path = "src/main.rs"

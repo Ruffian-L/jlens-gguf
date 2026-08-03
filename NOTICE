@@ -1,0 +1,193 @@
+Hydrodynamic Swarm — Third-Party Notices
+=========================================
+
+Update 2026-07-11
+-----------------
+We added this file and the attribution headers in source. We had omitted
+third-party and model-weight credits earlier. That was our mistake; we are
+correcting it now and will keep notices current.
+
+
+License cheat sheet (three different things — do not mix them up)
+-----------------------------------------------------------------
+
+1. OUR CODE (this repo's Rust) → MIT-0. See LICENSE.
+
+2. LOADER LIBRARIES (Candle, tokenizers, hf-hub) → Apache-2.0 OR MIT.
+   This is the Rust *code* that reads GGUF files and runs inference.
+   Apache applies to Candle/Hugging Face software — NOT to Meta or Google
+   model weights.
+
+3. MODEL WEIGHTS (the actual neural nets) → separate licenses:
+   - Meta Llama 3.1 → Llama 3.1 Community License (NOT Apache)
+   - Google Gemma 3, EmbeddingGemma → Gemma Terms of Use (NOT Apache)
+     (Gemma 4 uses Apache 2.0; we use Gemma 3, which does not.)
+
+
+When to say "Built with Llama"
+------------------------------
+Meta requires "Built with Llama" when you distribute or make available:
+  (a) Llama Materials (weights or derivatives), OR
+  (b) a product or service that contains Llama Materials.
+
+This repo is a published harness built to run Llama 3.1 weights, so we
+display "Built with Llama" in README (product documentation).
+
+You do NOT say "Built with Llama" for Candle's Apache-licensed loader code
+alone. That is a different license on different material.
+
+Local-only use of Llama weights you already downloaded, with no
+distribution, has lighter requirements — but this public repo still needs
+the notices below because we distribute the harness and its docs.
+
+
+Project code license
+--------------------
+Copyright 2026 Jason Van Pham
+
+This repository's original source code is licensed under MIT No Attribution
+(MIT-0). See LICENSE.
+
+
+Meta Llama 3.1 (model weights — NOT Apache)
+-------------------------------------------
+This project has used Meta Llama 3.1 extensively as its primary base model.
+The harness vendors a Llama 3.1 GGUF loader and steers the model's residual
+stream at inference time. We do not fine-tune or redistribute the weights
+themselves, but the published repo is a product built around Llama Materials.
+
+Required notice (Meta Llama 3.1 Community License §1.b.iii):
+
+  Llama 3.1 is licensed under the Llama 3.1 Community License,
+  Copyright (c) Meta Platforms, Inc. All Rights Reserved.
+
+Full license:
+  https://llama.meta.com/llama-downloads
+  https://github.com/meta-llama/llama-models/blob/main/models/llama3_1/LICENSE
+
+"Built with Llama" — displayed in README per §1.b.i.
+
+Models run in this repo (Llama 3.1 8B Instruct, GGUF Q5_K_M):
+  - Meta-Llama-3.1-8B-Instruct (base weights, Meta license)
+  - bartowski quant (https://huggingface.co/bartowski) — logged as "bert"
+  - Unsloth quant (https://unsloth.ai, https://huggingface.co/unsloth)
+    — logged as "unsloth"
+
+GGUF quantizations are still Llama Materials under Meta's license; bartowski
+and Unsloth are credited as quantizers, not as replacing Meta's terms.
+
+
+Google Gemma (model weights — NOT Apache for Gemma 3)
+-----------------------------------------------------
+Gemma 3 and EmbeddingGemma are under the Gemma Terms of Use (not Apache 2.0).
+
+Required notice (Gemma Terms of Use §3.1.4):
+
+  Gemma is provided under and subject to the Gemma Terms of Use found at
+  ai.google.dev/gemma/terms
+
+Full terms: https://ai.google.dev/gemma/terms
+
+Models used in this repo:
+  - Gemma 3 27B IT GGUF (data/google/gemma-3-27b-it-Q8_0.gguf) — current default
+  - EmbeddingGemma 300M via unsloth/embeddinggemma-300m-GGUF (concourse embed path)
+    — EmbeddingGemma is a Google Gemma family model (same Terms of Use)
+
+
+Unsloth
+-------
+GGUF quantizations and EmbeddingGemma packaging:
+  https://unsloth.ai
+  https://huggingface.co/unsloth
+
+Credit: Unsloth. Their work sits on top of Meta/Google base-model licenses.
+
+
+bartowski
+-----------
+Llama 3.1 8B Instruct GGUF quantizations:
+  https://huggingface.co/bartowski
+
+Credit: bartowski. Logged in-repo as model variant "bert".
+
+
+Vendored / adapted Rust code (Apache-2.0 OR MIT — this is the loader, not the weights)
+--------------------------------------------------------------------------------------
+
+candle-transformers (Hugging Face / Candle project)
+  src/llama.rs — MODIFIED from candle-transformers quantized_llama.rs
+  (originally candle-transformers 0.8.4; runtime dep candle 0.9).
+  License: Apache-2.0 OR MIT
+  https://github.com/huggingface/candle
+  https://www.apache.org/licenses/LICENSE-2.0
+
+src/gemma.rs, src/concourse/embed/quantized_gemma.rs
+  MODIFIED — Gemma 3 GGUF loader adapted from the llama.rs vendoring pattern.
+  Underlying Candle / candle-transformers components: Apache-2.0 OR MIT.
+
+
+llama.cpp — credit carefully (do not over-credit)
+-------------------------------------------------
+**Our Llama and Gemma 3 loaders were earned here** — Jason with AI co-engineers
+(Grok, Claude, Gemini, and others on the lineage), trial-and-error on real
+runs, not a copy of llama.cpp and not “they did it for us.” That work stays
+attributed to this collaboration. We did not steal or paste their C++ into
+hydro.
+
+The GGUF *format* and ecosystem exist because of open work including llama.cpp;
+a light format nod is fair. That is **not** the same as saying our Llama/Gemma3
+forward passes were taken from them.
+
+**Gemma 4 (2026-07-28 onward) — hard path:** Derive 3→4 from **our** `gemma.rs`,
+real GGUF metadata/tensors, local HF assets (`data/google/gemma4_assets/`), and
+garbage→English smokes. Jason removed the foreign C++ tree so we stop peeking
+maps. Early session notes that mentioned a map are historical; the port is
+Rust/Candle in **this** tree. GGUF *format* ecosystem credit still includes
+llama.cpp as format history only — not as the author of our G4 forward.
+
+See CREDITS.md and research_logs/2026-07-28_gemma4-loader-attribution-and-map.md.
+
+
+Compliance checklist (this repo, 2026-07-11)
+----------------------------------------------
+  [x] Meta Llama required notice text (above)
+  [x] "Built with Llama" in README
+  [x] Meta Llama full license linked
+  [x] Google Gemma required notice text (above)
+  [x] Google Gemma full terms linked
+  [x] bartowski, Unsloth credited
+  [x] Candle vendored code: source, license, MODIFIED markers in files
+  [x] Direct crate licenses summarized; run `cargo license` for full tree
+  [x] Project code: MIT-0 in LICENSE + Cargo.toml
+  [ ] Model weight files are NOT committed (user supplies locally) — correct
+
+
+Direct Rust crate dependencies (Cargo.toml)
+-----------------------------------------
+Each crate retains its own license. Summary of direct dependencies:
+
+  Apache-2.0 OR MIT: candle-core, candle-nn, candle-transformers, cudarc,
+    hf-hub, tokio, serde, serde_json, anyhow, thiserror, tracing,
+    tracing-subscriber, reqwest, futures, crossbeam, rayon, num-traits,
+    num-derive, unicode-normalization, parking_lot, bincode, rand, toml
+
+  Apache-2.0: tokenizers (Hugging Face), safetensors
+
+  BSD-3-Clause: nalgebra
+
+  MIT: rusqlite (bundled SQLite)
+
+Full transitive license set: run `cargo license` in the repo root.
+
+
+Rust ecosystem
+--------------
+Built with the Rust programming language (https://www.rust-lang.org) and
+crates published on https://crates.io. We are grateful to the Rust community
+and to every crate author whose work this project depends on.
+
+
+Other
+-----
+CUDA kernels in kernels/ are original to this project (MIT-0).
+NVIDIA CUDA toolkit is subject to NVIDIA's license when compiled with nvcc.
