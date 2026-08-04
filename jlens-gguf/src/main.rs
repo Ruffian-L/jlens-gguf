@@ -241,6 +241,16 @@ enum Command {
         /// them, so no human category enters the discovery step.
         #[arg(long)]
         tags: Option<PathBuf>,
+        /// Tag column that defines a positive pair (e.g. `stance`).
+        #[arg(long)]
+        pair_by: Option<String>,
+        /// Tag column a positive pair must **differ** on (e.g. `variant`).
+        ///
+        /// This is the control that separates "the geometry encodes a stance" from "the
+        /// geometry encodes the words about to be emitted": require every positive pair to
+        /// share the stance while using deliberately disjoint phrasing.
+        #[arg(long)]
+        differ_on: Option<String>,
     },
 
     /// **Gate 2.** Sweep ε at one layer and report whether `J v` has a plateau.
@@ -510,9 +520,11 @@ fn main() -> Result<()> {
             max_seq_len,
             max_steps,
             tags,
+            pair_by,
+            differ_on,
         } => cmd_structure(
             &model, &prompts, &layers, depth, k, continuation, max_seq_len, max_steps,
-            tags.as_deref(),
+            tags.as_deref(), pair_by.as_deref(), differ_on.as_deref(),
         ),
         Command::Sweep {
             model,
@@ -628,6 +640,8 @@ fn cmd_structure(
     max_seq_len: usize,
     max_steps: usize,
     tags_path: Option<&std::path::Path>,
+    pair_by: Option<&str>,
+    differ_on: Option<&str>,
 ) -> Result<()> {
     use jlens_gguf::structure as st;
 
@@ -786,6 +800,51 @@ fn cmd_structure(
             }
         }
         println!();
+    }
+
+    if let (Some(path), Some(group_col)) = (tags_path, pair_by) {
+        let raw = std::fs::read_to_string(path)?;
+        let mut lines = raw.lines();
+        let header: Vec<&str> = lines.next().unwrap_or("").split('\t').collect();
+        let rows: Vec<Vec<&str>> = lines.map(|l| l.split('\t').collect()).collect();
+        let col = |name: &str| header.iter().position(|h| *h == name);
+        let gi = col(group_col)
+            .ok_or_else(|| anyhow::anyhow!("tags have no column {group_col:?}"))?;
+        let di = differ_on.and_then(col);
+        let get = |i: usize, c: usize| rows.get(i).and_then(|r| r.get(c)).copied().unwrap_or("");
+
+        println!(
+            "\npositive = same `{group_col}`{}; null = different `{group_col}`\n",
+            differ_on.map(|d| format!(", different `{d}`")).unwrap_or_default()
+        );
+        println!("{:>6} {:>8} {:>8} {:>9}", "layer", "n_pos", "n_null", "AUC");
+        for &layer in &layers {
+            let rs = &residuals[&layer];
+            let mut positive = Vec::new();
+            let mut null = Vec::new();
+            for a in 0..n {
+                for b in (a + 1)..n {
+                    let (ia, ib) = (used[a], used[b]);
+                    let same_group = get(ia, gi) == get(ib, gi);
+                    // Cosine similarity, so higher = more alike, matching the AUC convention.
+                    let sim = 1.0 - st::cos_dist(&rs[a], &rs[b]);
+                    if same_group {
+                        let ok = di.map(|d| get(ia, d) != get(ib, d)).unwrap_or(true);
+                        if ok {
+                            positive.push(sim);
+                        }
+                    } else {
+                        null.push(sim);
+                    }
+                }
+            }
+            let sc = jlens_gguf::stability::LayerScores { layer, positive, null }.summarize();
+            let mark = if sc.auc >= 0.80 { "  PASS" } else { "" };
+            println!(
+                "L{:<5} {:>8} {:>8} {:>9.4}{mark}",
+                layer, sc.n_positive, sc.n_null, sc.auc
+            );
+        }
     }
 
     if let Some(path) = tags_path {

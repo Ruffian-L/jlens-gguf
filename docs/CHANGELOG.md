@@ -534,3 +534,69 @@ pre-registered 0.80 bar, still recorded as FAIL.
 - The one clear architectural difference is that Gemma 4 has a thought channel and Gemma 3
   does not. Gemma 4's form signal is much weaker (0.36 vs 0.89). A thought block diffusing
   the opening stance is a plausible explanation and an untested one.
+
+---
+
+## 2026-08-03 — stance survives disjoint wording. Gate PASS.
+
+A reviewer raised the sharpest objection so far: the cluster exemplars share literal strings
+("at its simplest level", "teach X to a beginner"), so the form/stance signal might be
+**string overlap** — residuals sitting close because the same words are about to be emitted,
+not because a stance is encoded. If true, the headline collapses into "similar-sounding
+questions produce similar-sounding answers", which is boring and true.
+
+One correction to the objection: capture is at depth 0, so those shared strings are in the
+model's *future*, not its past — there is almost no prefix at capture time. That doesn't
+rescue the claim, it relocates it: at depth 0 the model has committed to how it will open,
+and "committed to a stance" vs "committed to a string" are hard to tell apart.
+
+### The test
+
+Eight stances, each written **twice with deliberately disjoint wording**:
+
+```
+overview   "Give me a short overview of X."      | "In brief, what should I know about X?"
+teaching   "How would you teach X to a beginner?"| "If someone knew nothing about X, where
+                                                   would you start?"
+```
+
+Phrasing A covers subjects 0–5, phrasing B covers subjects 6–11, so a positive pair is
+**same stance, different wording, different subject**. Plus a ninth group of arithmetic
+("What is 7 + 5?") where the model has no stance latitude at all.
+
+### Result: PASS
+
+Restricted to pure cross-wording positives (`--pair-by stance --differ-on variant`):
+
+| layer | n_pos | n_null | AUC |
+|---|---:|---:|---:|
+| L12 | 288 | 5184 | 0.7719 |
+| **L20** | 288 | 5184 | **0.8553** ✅ |
+| **L28** | 288 | 5184 | **0.8753** ✅ |
+
+Above the pre-registered 0.80 bar, and **higher than the mixed-wording version** (0.8226) —
+the opposite of what string overlap predicts. NMI confirms it:
+
+| layer | stance | variant (wording) | subject |
+|---|---:|---:|---:|
+| L20 | 0.849 | 0.320 | 0.224 |
+| L28 | **0.864** | 0.339 | 0.228 |
+
+Stance 0.86, wording 0.34, subject 0.23.
+
+The decode-time gate on the same corpus also passes: **N\* = 0, L20, AUC 0.8226**, decaying
+to 0.58 by eight content tokens in — the signal is at the opening and fades, which is the
+same shape seen everywhere else here.
+
+### What this does and does not establish
+
+It establishes that the geometry at the first generated token groups by *what kind of answer
+is coming*, across disjoint phrasing and disjoint subjects, on a pre-registered threshold
+written before any of these runs.
+
+It does not establish that "stance" is a natural kind rather than a convenient name for
+"the class of answer about to be produced". Operationally those are the same thing for
+addressing memory, which is what this is for — but they are not the same claim.
+
+Still owed: bootstrap CIs (a pass deserves the same rigour a fail got), a k sweep, and a
+non-Gemma model. Both models so far are Gemma.

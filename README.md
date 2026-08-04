@@ -2,6 +2,12 @@
 
 **Reading what a language model is *disposed* to say, from inside a GGUF file.**
 
+Current headline: at the first generated token, the residual geometry groups by **the kind
+of answer about to be produced** — holding across deliberately disjoint phrasing and
+different subjects (AUC 0.875, pre-registered bar 0.80). The signal is sharpest at the
+opening and decays within eight tokens, so it is durable *as an address*, not as something
+that persists through the generation.
+
 An open notebook, not a paper. Hypotheses are registered before runs, results are posted
 whether they hold or not, and the log keeps the wrong turns in.
 
@@ -42,7 +48,7 @@ One geometric position; four tokens; the channel had to pick one.
 | …through a dequantised one | ✅ `CANDLE_DEQUANTIZE_ALL=1`, textbook plateau across 27 blocks |
 | Do first-thought keys cluster by **subject**? | ⚠️ AUC 0.70 — real signal, **under our pre-registered 0.80 bar** |
 | Is the geometry organised at all? | ✅ yes, against a shuffled null, every metric |
-| Is it organised by *stance*? | ✅ **yes on Gemma 3** — form NMI 0.888 vs subject 0.172; muddled on Gemma 4 |
+| Is it organised by *stance*? | ✅ **AUC 0.875 across disjoint wording** — stance NMI 0.864 vs wording 0.339, subject 0.228 |
 | Replicated on a second model? | ✅ Gemma 3 4B — structure holds, stance far stronger |
 
 ### What the geometry is organised by — honestly
