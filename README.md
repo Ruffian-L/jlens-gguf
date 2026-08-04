@@ -6,11 +6,21 @@ Current state, after three models: the residual geometry at the first generated 
 **has real structure** everywhere we've looked, and it **predicts the continuation**
 (2.8–3.1× over chance on Llama). But *what* it is organised by does not generalise.
 
-On Gemma 3 4B it groups by the kind of answer coming — across disjoint phrasing and
-different subjects, AUC 0.875 against a pre-registered 0.80 bar. On **Llama 3.1 8B the same
-test fails at 0.738**, and subject slightly outranks stance. So the stance result is a
-Gemma 3 result, not a language-model result, and Gemma 3's unusually formulaic openings are
-the likeliest reason.
+Four models on the same corpus, cross-wording AUC against a pre-registered 0.80 bar:
+
+| model | AUC | stance | subject |
+|---|---|---:|---:|
+| Gemma 3 4B | **0.875** ✅ | 0.864 | 0.228 |
+| Gemma 3 27B | **0.893** ✅ | 0.811 | 0.238 |
+| Gemma 4 12B | 0.696 ❌ | 0.532 | 0.435 |
+| Llama 3.1 8B | 0.738 ❌ | 0.465 | 0.506 |
+
+**Gemma 3 separates the kind of answer coming from what it is about. Llama 3.1 does not.**
+It holds across a 7× size range within Gemma 3, so it is not a small-model artifact — we
+originally guessed it was formulaic openings and a 27B run killed that. The Llama comparison
+is clean (both answer directly after the turn header). The Gemma 4 comparison is confounded:
+it opens a thought channel, so its first generated token sits *inside a thought block*, a
+different functional position.
 
 Where the signal *is* present it is sharpest at the opening and decays within eight tokens —
 durable *as an address*, not as something persisting through the generation.

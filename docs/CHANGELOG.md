@@ -656,3 +656,66 @@ that something *is* varies by model.
 ends at `<|eot_id|>` / `<|end_of_text|>`, so decodes ran past the end of the turn. EOS is now
 resolved from the tokenizer. This does **not** change the numbers above — capture is at
 depth 0, long before any EOS — but it corrupted the continuation strings.
+
+---
+
+## 2026-08-03 (later) — four models, same corpus. It is Gemma 3, and it is not size.
+
+Ran the disjoint-wording stance test on every model that loads, all on the **same corpus**
+(the earlier Gemma 4 number was from a different corpus and was not comparable).
+
+| model | family | size | best cross-wording AUC | stance | variant | subject |
+|---|---|---|---|---:|---:|---:|
+| Gemma 3 4B | gemma3 | 4B | **0.8753** ✅ | 0.864 | 0.339 | 0.228 |
+| Gemma 3 27B | gemma3 | 27B | **0.8926** ✅ | 0.811 | 0.293 | 0.238 |
+| Gemma 4 12B | gemma4 | 12B | 0.6963 ❌ | 0.532 | 0.272 | 0.435 |
+| Llama 3.1 8B | llama | 8B | 0.7383 ❌ | 0.465 | 0.276 | 0.506 |
+
+### The size hypothesis is dead
+
+Yesterday's explanation was that Gemma 3 4B's unusually formulaic openings ("Okay, let's
+dive into…") were why stance dominated, and that a bigger, less templated model would show
+less of it. **Gemma 3 27B is 7× larger and scores higher** (0.8926 vs 0.8753), with nearly
+identical NMI (stance 0.81 / subject 0.24 against 0.86 / 0.23). The effect is stable across
+a 7× size range within the family. Size is ruled out; so is templated-ness.
+
+That is the second explanation of mine falsified by a run in two days. The first was
+predicting the Gemma 4 clusters would be question-form.
+
+### What the split actually tracks
+
+Gemma 3 passes at both sizes. Gemma 4 and Llama 3.1 both fail, and in both the stance and
+subject NMIs are close together rather than separated.
+
+**The Llama comparison is clean.** Gemma 3 and Llama 3.1 both answer directly after the
+turn header, so "the first generated token" is the same functional position in both. Gemma 3
+separates stance from subject 0.86 vs 0.23; Llama does not, 0.47 vs 0.51.
+
+**The Gemma 4 comparison is confounded and should not be read as a family result.** Gemma 4
+opens a thought channel, so its depth-0 token sits *inside a thought block*, not at the start
+of the answer. That is a different functional position, and the gap may be about where we
+are reading rather than about the model. Testing that means capturing Gemma 4 at the first
+token of its post-thought answer, which we have not done.
+
+### Where this leaves it
+
+A real, size-stable property of Gemma 3: the residual at the first generated token separates
+*what kind of answer is coming* from *what it is about*, across disjoint phrasing. Llama 3.1
+does not do this. We do not know why, and the honest scope is one model family.
+
+Structure and continuation-prediction still hold on all four (continuation ratio 2.8–3.5×,
+highest on the 27B at 3.49×).
+
+### Models that could not be tested
+
+`diffusiongemma-26B-A4B` — `general.architecture = diffusion-gemma`, 128 experts / 8 used.
+No MoE support in the loader, and arch sniffing would route it to the Gemma 3 loader and
+produce garbage. Conceptually it also has no "first generated token": a diffusion LM denoises
+the whole sequence, so the framing needs rethinking before the measurement means anything.
+
+### Loader footgun, hit twice
+
+Tokenizer fallbacks in `loader.rs` are **relative paths**, so from any cwd but the repo root
+they miss and a stray Llama `tokenizer.json` sitting next to the models wins the search.
+Symptom the second time: 0 usable prompts, because `<bos>` and `<|turn>` tokenised as
+garbage. Always pass `--tokenizer` with an absolute path.
