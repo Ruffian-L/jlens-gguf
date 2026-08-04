@@ -719,3 +719,55 @@ Tokenizer fallbacks in `loader.rs` are **relative paths**, so from any cwd but t
 they miss and a stray Llama `tokenizer.json` sitting next to the models wins the search.
 Symptom the second time: 0 usable prompts, because `<bos>` and `<|turn>` tokenised as
 garbage. Always pass `--tokenizer` with an absolute path.
+
+---
+
+## 2026-08-03 (later still) — CIs, and two of my own caveats retracted
+
+### The Gemma 4 confound was imaginary
+
+Yesterday I flagged Gemma 4's failure as confounded, on the grounds that its depth-0 token
+sits inside a thought block rather than at the start of an answer. **It does not.** Hydro
+appends the *thinking-off* generation prompt — `<|channel>thought\n<channel|>`, an empty
+thought block already closed — so the model answers immediately:
+
+```
+"**Photosynthesis** is the biological process by which green plants, algae"
+```
+
+All four models were read at the same functional position: the first token of the answer.
+Gemma 4's failure is genuine, which makes the result sharper — Gemma 3's own successor,
+same lab, one generation later, lost the property.
+
+### Bootstrap CIs (400 resamples over prompts, 95%)
+
+Resampling over **prompts**, not pairs: pairs share prompts and are not independent, so a
+pair-level bootstrap would report an interval far too narrow.
+
+| model | best AUC | 95% CI | verdict |
+|---|---:|---|---|
+| Gemma 3 4B (L28) | 0.8753 | [0.828, 0.916] | **clear pass** |
+| Gemma 3 27B (L37) | 0.8926 | [0.828, 0.946] | **clear pass** |
+| Gemma 4 12B (L28) | 0.6963 | [0.619, 0.787] | **clear fail** |
+| Llama 3.1 8B (L20) | 0.7383 | [0.657, 0.820] | **inconclusive** |
+
+**Llama 3.1 is not a fail. It is underpowered.** Its interval spans the 0.80 bar, so at
+n=108 we cannot distinguish it from passing. Calling it a failure — as this log did earlier
+today — was reading a point estimate as a verdict. Retracted.
+
+The clean, statistically supported contrast is **Gemma 3 vs Gemma 4**: both intervals are
+entirely on their respective sides of the bar, and they point opposite ways.
+
+### Where this actually leaves it
+
+Supported: Gemma 3 (4B and 27B) separates *the kind of answer coming* from *what it is
+about* at the first generated token, across disjoint phrasing, stable over a 7× size range,
+with the CI clear of the pre-registered bar. Gemma 4 does not, with the CI clear of the bar
+in the other direction.
+
+Not supported either way: Llama 3.1, and therefore the whole question of whether this is a
+Google-model property, a Gemma-3-specific one, or something broader. Settling Llama needs a
+larger corpus, not a new model.
+
+Unchanged and holding on all four: structure against a shuffled null, and first-token state
+predicting the continuation (2.8–3.5×).

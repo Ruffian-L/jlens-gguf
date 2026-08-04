@@ -244,6 +244,12 @@ enum Command {
         /// Tag column that defines a positive pair (e.g. `stance`).
         #[arg(long)]
         pair_by: Option<String>,
+        /// Bootstrap resamples for the AUC confidence interval. 0 disables.
+        ///
+        /// Resampling is over **prompts**, not pairs: pairs share prompts and are not
+        /// independent, so a pair-level bootstrap would report an interval far too narrow.
+        #[arg(long, default_value_t = 0)]
+        bootstrap: usize,
         /// Tag column a positive pair must **differ** on (e.g. `variant`).
         ///
         /// This is the control that separates "the geometry encodes a stance" from "the
@@ -520,11 +526,12 @@ fn main() -> Result<()> {
             max_seq_len,
             max_steps,
             tags,
+            bootstrap,
             pair_by,
             differ_on,
         } => cmd_structure(
             &model, &prompts, &layers, depth, k, continuation, max_seq_len, max_steps,
-            tags.as_deref(), pair_by.as_deref(), differ_on.as_deref(),
+            tags.as_deref(), pair_by.as_deref(), differ_on.as_deref(), bootstrap,
         ),
         Command::Sweep {
             model,
@@ -642,6 +649,7 @@ fn cmd_structure(
     tags_path: Option<&std::path::Path>,
     pair_by: Option<&str>,
     differ_on: Option<&str>,
+    bootstrap: usize,
 ) -> Result<()> {
     use jlens_gguf::structure as st;
 
@@ -846,8 +854,52 @@ fn cmd_structure(
             }
             let sc = jlens_gguf::stability::LayerScores { layer, positive, null }.summarize();
             let mark = if sc.auc >= 0.80 { "  PASS" } else { "" };
+
+            // Percentile bootstrap over prompts. Tells a fail apart from a near-miss:
+            // 0.74 [0.70, 0.78] is a clear miss; 0.74 [0.66, 0.82] is not.
+            let ci = if bootstrap > 0 {
+                let mut state = 0x5EEDu64 ^ layer as u64;
+                let mut aucs = Vec::with_capacity(bootstrap);
+                for _ in 0..bootstrap {
+                    let pick: Vec<usize> =
+                        (0..n).map(|_| {
+                            state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+                            ((state >> 33) as usize) % n
+                        }).collect();
+                    let (mut bp, mut bn) = (Vec::new(), Vec::new());
+                    for (x, &a) in pick.iter().enumerate() {
+                        for &b in pick.iter().skip(x + 1) {
+                            if a == b { continue; }
+                            let (ia, ib) = (used[a], used[b]);
+                            let sim = 1.0 - st::cos_dist(&rs[a], &rs[b]);
+                            if get(ia, gi) == get(ib, gi) {
+                                if di.map(|d| get(ia, d) != get(ib, d)).unwrap_or(true) {
+                                    bp.push(sim);
+                                }
+                            } else {
+                                bn.push(sim);
+                            }
+                        }
+                    }
+                    let s = jlens_gguf::stability::LayerScores {
+                        layer, positive: bp, null: bn,
+                    }.summarize();
+                    if s.auc.is_finite() { aucs.push(s.auc); }
+                }
+                aucs.sort_by(|a, b| a.partial_cmp(b).unwrap());
+                if aucs.len() >= 20 {
+                    let lo = aucs[aucs.len() * 25 / 1000];
+                    let hi = aucs[aucs.len() * 975 / 1000];
+                    format!("  [{lo:.3}, {hi:.3}]")
+                } else {
+                    String::new()
+                }
+            } else {
+                String::new()
+            };
+
             println!(
-                "L{:<5} {:>8} {:>8} {:>9.4}{mark}",
+                "L{:<5} {:>8} {:>8} {:>9.4}{ci}{mark}",
                 layer, sc.n_positive, sc.n_null, sc.auc
             );
         }

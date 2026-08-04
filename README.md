@@ -8,19 +8,26 @@ Current state, after three models: the residual geometry at the first generated 
 
 Four models on the same corpus, cross-wording AUC against a pre-registered 0.80 bar:
 
-| model | AUC | stance | subject |
-|---|---|---:|---:|
-| Gemma 3 4B | **0.875** ✅ | 0.864 | 0.228 |
-| Gemma 3 27B | **0.893** ✅ | 0.811 | 0.238 |
-| Gemma 4 12B | 0.696 ❌ | 0.532 | 0.435 |
-| Llama 3.1 8B | 0.738 ❌ | 0.465 | 0.506 |
+| model | AUC | 95% CI | stance | subject |
+|---|---|---|---:|---:|
+| Gemma 3 4B | **0.875** ✅ | [0.828, 0.916] | 0.864 | 0.228 |
+| Gemma 3 27B | **0.893** ✅ | [0.828, 0.946] | 0.811 | 0.238 |
+| Gemma 4 12B | 0.696 ❌ | [0.619, 0.787] | 0.532 | 0.435 |
+| Llama 3.1 8B | 0.738 ⚠️ | [0.657, 0.820] | 0.465 | 0.506 |
 
-**Gemma 3 separates the kind of answer coming from what it is about. Llama 3.1 does not.**
-It holds across a 7× size range within Gemma 3, so it is not a small-model artifact — we
-originally guessed it was formulaic openings and a 27B run killed that. The Llama comparison
-is clean (both answer directly after the turn header). The Gemma 4 comparison is confounded:
-it opens a thought channel, so its first generated token sits *inside a thought block*, a
-different functional position.
+Bootstrap over prompts, 400 resamples. **Llama's interval spans the bar — that one is
+underpowered, not failed**, and calling it a failure earlier was reading a point estimate as
+a verdict.
+
+**Gemma 3 separates the kind of answer coming from what it is about. Gemma 4 does not.**
+Both intervals sit entirely on their own side of the bar, pointing opposite ways — and Gemma
+4 is Gemma 3's successor from the same lab. The effect holds across a 7× size range within
+Gemma 3, so it is not a small-model artifact; we originally guessed formulaic openings and a
+27B run killed that.
+
+All four models are read at the same functional position — the first token of the *answer*.
+An earlier draft claimed Gemma 4's was confounded by its thought channel; it is not, because
+the prompt closes an empty thought block and the model answers immediately.
 
 Where the signal *is* present it is sharpest at the opening and decays within eight tokens —
 durable *as an address*, not as something persisting through the generation.
