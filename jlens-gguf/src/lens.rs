@@ -156,14 +156,7 @@ impl Lens {
             }
         }
 
-        let encoded = tokenizer
-            .encode(prompt, true)
-            .map_err(|e| anyhow::anyhow!("tokenizing: {e}"))?;
-        let mut ids = encoded.get_ids().to_vec();
-        ids.truncate(self.max_seq_len);
-        if ids.is_empty() {
-            bail!("prompt tokenised to nothing");
-        }
+        let ids = crate::tokens::encode_prompt(tokenizer, prompt, self.max_seq_len)?;
         let seq_len = ids.len();
         let tokens = Tensor::new(ids.as_slice(), device)?.unsqueeze(0)?;
 

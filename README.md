@@ -42,7 +42,8 @@ One geometric position; four tokens; the channel had to pick one.
 | …through a dequantised one | ✅ `CANDLE_DEQUANTIZE_ALL=1`, textbook plateau across 27 blocks |
 | Do first-thought keys cluster by **subject**? | ⚠️ AUC 0.70 — real signal, **under our pre-registered 0.80 bar** |
 | Is the geometry organised at all? | ✅ yes, against a shuffled null, every metric |
-| Is it organised by *stance*? | 🔬 partly — mixed with subject, neither dominant |
+| Is it organised by *stance*? | ✅ **yes on Gemma 3** — form NMI 0.888 vs subject 0.172; muddled on Gemma 4 |
+| Replicated on a second model? | ✅ Gemma 3 4B — structure holds, stance far stronger |
 
 ### What the geometry is organised by — honestly
 
@@ -84,10 +85,11 @@ gives **AUC 0.70** at the first thought token — well above chance, below our 0
 is recorded as a fail. It decays with depth (0.70 → 0.61 → 0.58 at 0, 2, 8 tokens in), which
 says the subject signal is sharpest the instant the thought opens.
 
-**Caveats a reader should have:** one model, one corpus, n=200, single run. Gemma 4 is
+**Caveats a reader should have:** two models now (Gemma 4 12B, Gemma 3 4B), one corpus each, n=200. Gemma 4 is
 unusual (thinking-channel format, √d embedding scale, BOS-sensitive) so this may be a Gemma
 fact rather than a language-model fact. The continuation-agreement metric is partly circular
-under greedy decode. Replication on a second model is the next thing, not a footnote.
+under greedy decode. Gemma 3 4B has very formulaic openings, which plausibly inflates its
+form NMI. See [`docs/CHANGELOG.md`](docs/CHANGELOG.md) for the Gemma 3 numbers in full.
 
 ## Things that fell out along the way
 

@@ -473,3 +473,64 @@ were printed.
 
 Structure is real (all four metrics beat a shuffled null). What it is organised by is a
 mixture of topic and opening move, neither dominant. The clean version was wrong.
+
+---
+
+## 2026-08-03 — replicated on Gemma 3. Stance is much stronger there.
+
+Second architecture, same protocols. `gemma-3-4b-it-Q4_K_M`, 34 layers, d=2560, no thought
+channel — it answers directly after `<start_of_turn>model`.
+
+### Two more tokenizer traps, both fixed
+
+- **Trailing `<eos>`.** Gemma 3's post-processor is `[<bos>, A, <eos>]`, so every encoded
+  prompt *ends* with an end token. Reading "the last prompt position" read the disposition
+  at `<eos>`. `hydrodynamic-swarm` strips this (`encode_prompt_no_trailing_eos`); the
+  sidecar did not. Now routed through `tokens::encode_prompt`.
+- **Wrong tokenizer silently loaded.** The loader prefers a tokenizer sitting next to the
+  model, and a stray Llama 3.1 `tokenizer.json` in the models directory won — position 0 came
+  back as `<|begin_of_text|>` (128000). Gemma 4 has a guard against this; Gemma 3 does not.
+  Pass `--tokenizer` explicitly.
+
+Also: the anchor rule now treats "no thought channel in the template" as *stream already
+open*, instead of falling through to a step-8 heuristic written for Gemma 4.
+
+### Structure: replicates
+
+| layer | eff. dim (real/null) | silhouette (real/null) | continuation |
+|---|---|---|---|
+| L20 | 4.75 / 9.26 | 0.522 / -0.031 | 1.61× |
+| L28 | 3.85 / 13.15 | 0.578 / -0.040 | 1.54× |
+
+### What the clusters are: decisively **form**, not subject
+
+| model | layer | form | subject |
+|---|---|---:|---:|
+| Gemma 4 12B | L36 | 0.360 | 0.345 |
+| **Gemma 3 4B** | L12 | 0.476 | 0.177 |
+| **Gemma 3 4B** | **L20** | **0.888** | 0.172 |
+
+NMI 0.888 — the unsupervised clustering essentially recovered the eight question forms
+without being told they exist. Exemplars are unambiguous: photosynthesis, the Silk Road and
+tidal power cluster together because all three were asked for *a short overview*.
+
+```
+cluster 7   "here's a short overview of photosynthesis:"
+            "here's a short overview of the Silk Road:"
+            "here's a short overview of tidal power:"
+cluster 4   "a beginner to ecology?" / "a beginner's to design" / "a beginner farmer"
+```
+
+### Subject gate: replicates as a near-miss
+
+Peak **AUC 0.718** (N=2, L20) against Gemma 4's 0.70. Real signal, still under the
+pre-registered 0.80 bar, still recorded as FAIL.
+
+### Two caveats we'd want a reader to have
+
+- Gemma 3 4B has **very formulaic openings** ("Okay, let's dive into…"). That plausibly
+  inflates form NMI relative to a larger or less templated model. The comparison to Gemma 4
+  is confounded by size as well as by architecture.
+- The one clear architectural difference is that Gemma 4 has a thought channel and Gemma 3
+  does not. Gemma 4's form signal is much weaker (0.36 vs 0.89). A thought block diffusing
+  the opening stance is a plausible explanation and an untested one.

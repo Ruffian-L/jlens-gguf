@@ -193,14 +193,7 @@ pub struct PromptStats {
 
 /// Tokenise and truncate, returning `[1, seq]` on `device`.
 fn encode(tokenizer: &Tokenizer, prompt: &str, max_seq_len: usize, device: &Device) -> Result<Tensor> {
-    let encoded = tokenizer
-        .encode(prompt, true)
-        .map_err(|e| anyhow::anyhow!("tokenizing: {e}"))?;
-    let mut ids = encoded.get_ids().to_vec();
-    ids.truncate(max_seq_len);
-    if ids.is_empty() {
-        bail!("prompt tokenised to nothing");
-    }
+    let ids = crate::tokens::encode_prompt(tokenizer, prompt, max_seq_len)?;
     Ok(Tensor::new(ids.as_slice(), device)?.unsqueeze(0)?)
 }
 

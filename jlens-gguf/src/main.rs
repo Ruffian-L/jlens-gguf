@@ -650,12 +650,13 @@ fn cmd_structure(
     let mut used: Vec<usize> = Vec::new();
 
     for (i, prompt) in prompts.iter().enumerate() {
-        let encoded = tokenizer
-            .encode(prompt.as_str(), true)
-            .map_err(|e| anyhow::anyhow!("tokenizing {i}: {e}"))?;
-        let mut ids = encoded.get_ids().to_vec();
-        ids.truncate(max_seq_len);
-        let header_prefilled = prompt.trim_end().ends_with("<channel|>");
+        let ids = jlens_gguf::tokens::encode_prompt(&tokenizer, prompt, max_seq_len)?;
+        // The thought stream is already open when the prompt ends with the channel
+            // header, and also when the model family has no thought channel at all
+            // (Gemma 3 answers directly after `<start_of_turn>model`). Only a Gemma 4
+            // prompt that stops before the header has a header left to skip.
+            let header_prefilled =
+                prompt.trim_end().ends_with("<channel|>") || !prompt.contains("channel");
 
         let captured = jlens_gguf::decode::decode_and_capture(
             &mut model,
@@ -778,8 +779,10 @@ fn cmd_structure(
                 let text = tokenizer
                     .decode(&continuations[i], false)
                     .unwrap_or_default();
-                let text: String = text.chars().take(64).collect();
-                println!("    {:?}", text.trim());
+                // Don't trim: Gemma 3 opens with "\n\n" and trimming shows an empty
+                // exemplar for every member of a real cluster.
+                let text: String = text.chars().take(72).collect();
+                println!("    {:?}", text);
             }
         }
         println!();
@@ -895,14 +898,15 @@ fn cmd_stability_decode(
 
     for (subject, paraphrases) in &corpus {
         for (idx, prompt) in paraphrases.iter().enumerate() {
-            let encoded = tokenizer
-                .encode(prompt.as_str(), true)
-                .map_err(|e| anyhow::anyhow!("tokenizing {subject}[{idx}]: {e}"))?;
-            let mut ids = encoded.get_ids().to_vec();
-            ids.truncate(max_seq_len);
+            let ids = jlens_gguf::tokens::encode_prompt(&tokenizer, prompt, max_seq_len)?;
             // If the corpus already ends each prompt with the thought header, the thought
             // stream starts immediately and there is no header to skip.
-            let header_prefilled = prompt.trim_end().ends_with("<channel|>");
+            // The thought stream is already open when the prompt ends with the channel
+            // header, and also when the model family has no thought channel at all
+            // (Gemma 3 answers directly after `<start_of_turn>model`). Only a Gemma 4
+            // prompt that stops before the header has a header left to skip.
+            let header_prefilled =
+                prompt.trim_end().ends_with("<channel|>") || !prompt.contains("channel");
 
             let repeats = if done == 0 { 2 } else { 1 };
             let mut repeated: Vec<Vec<f32>> = Vec::new();
@@ -1470,14 +1474,10 @@ fn cmd_baseline(
     let mut acc = jlens_gguf::baseline::Accumulator::new(d_model);
     let mut used = 0usize;
     for (i, prompt) in prompts.iter().enumerate() {
-        let encoded = tokenizer
-            .encode(prompt.as_str(), true)
-            .map_err(|e| anyhow::anyhow!("tokenizing prompt {i}: {e}"))?;
-        let mut ids = encoded.get_ids().to_vec();
-        ids.truncate(max_seq_len);
-        if ids.is_empty() {
-            continue;
-        }
+        let ids = match jlens_gguf::tokens::encode_prompt(&tokenizer, prompt, max_seq_len) {
+            Ok(ids) => ids,
+            Err(_) => continue,
+        };
         let seq_len = ids.len();
         // Same exclusion as the fit: attention-sink positions have atypical statistics and
         // would drag the mean toward structure no real readout position ever sees.
@@ -1576,14 +1576,7 @@ fn cmd_readout(
         );
     }
 
-    let encoded = tokenizer
-        .encode(prompt, true)
-        .map_err(|e| anyhow::anyhow!("tokenizing: {e}"))?;
-    let mut ids = encoded.get_ids().to_vec();
-    ids.truncate(max_seq_len);
-    if ids.is_empty() {
-        bail!("prompt tokenised to nothing");
-    }
+    let ids = jlens_gguf::tokens::encode_prompt(&tokenizer, prompt, max_seq_len)?;
     let seq_len = ids.len();
     let tokens = Tensor::new(ids.as_slice(), &device)?.unsqueeze(0)?;
 
