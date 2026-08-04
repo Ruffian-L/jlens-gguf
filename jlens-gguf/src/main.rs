@@ -649,7 +649,13 @@ fn cmd_structure(
     let (mut model, tokenizer, device) = load(args)?;
     let n_layers = model.n_layers();
     let layers = parse_layers(layers_spec, n_layers)?;
-    let eos: Vec<u32> = vec![1, 106, 50];
+    // EOS is family-specific: Gemma's <eos>/<turn|>/<|tool_response> ids mean nothing to
+    // Llama, whose turn ends at <|eot_id|> / <|end_of_text|>. Resolve from the tokenizer so
+    // a decode actually stops where the turn does.
+    let eos: Vec<u32> = ["<eos>", "<turn|>", "<end_of_turn>", "<|eot_id|>", "<|end_of_text|>"]
+        .iter()
+        .filter_map(|t| tokenizer.token_to_id(t))
+        .collect();
     // Capture at `depth`, and far enough beyond it to compare continuations.
     let depths: Vec<usize> = (0..=(depth + continuation)).collect();
 
@@ -937,7 +943,13 @@ fn cmd_stability_decode(
     let d_model = model.token_embeddings().dim(1)?;
     let layers = parse_layers(layers_spec, n_layers)?;
     // Gemma 4 IT end-of-turn set, from `main.rs::generation_eos_token_ids`.
-    let eos: Vec<u32> = vec![1, 106, 50];
+    // EOS is family-specific: Gemma's <eos>/<turn|>/<|tool_response> ids mean nothing to
+    // Llama, whose turn ends at <|eot_id|> / <|end_of_text|>. Resolve from the tokenizer so
+    // a decode actually stops where the turn does.
+    let eos: Vec<u32> = ["<eos>", "<turn|>", "<end_of_turn>", "<|eot_id|>", "<|end_of_text|>"]
+        .iter()
+        .filter_map(|t| tokenizer.token_to_id(t))
+        .collect();
 
     let total: usize = corpus.values().map(Vec::len).sum();
     println!(

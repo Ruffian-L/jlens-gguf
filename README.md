@@ -2,11 +2,18 @@
 
 **Reading what a language model is *disposed* to say, from inside a GGUF file.**
 
-Current headline: at the first generated token, the residual geometry groups by **the kind
-of answer about to be produced** — holding across deliberately disjoint phrasing and
-different subjects (AUC 0.875, pre-registered bar 0.80). The signal is sharpest at the
-opening and decays within eight tokens, so it is durable *as an address*, not as something
-that persists through the generation.
+Current state, after three models: the residual geometry at the first generated token
+**has real structure** everywhere we've looked, and it **predicts the continuation**
+(2.8–3.1× over chance on Llama). But *what* it is organised by does not generalise.
+
+On Gemma 3 4B it groups by the kind of answer coming — across disjoint phrasing and
+different subjects, AUC 0.875 against a pre-registered 0.80 bar. On **Llama 3.1 8B the same
+test fails at 0.738**, and subject slightly outranks stance. So the stance result is a
+Gemma 3 result, not a language-model result, and Gemma 3's unusually formulaic openings are
+the likeliest reason.
+
+Where the signal *is* present it is sharpest at the opening and decays within eight tokens —
+durable *as an address*, not as something persisting through the generation.
 
 An open notebook, not a paper. Hypotheses are registered before runs, results are posted
 whether they hold or not, and the log keeps the wrong turns in.
@@ -48,8 +55,9 @@ One geometric position; four tokens; the channel had to pick one.
 | …through a dequantised one | ✅ `CANDLE_DEQUANTIZE_ALL=1`, textbook plateau across 27 blocks |
 | Do first-thought keys cluster by **subject**? | ⚠️ AUC 0.70 — real signal, **under our pre-registered 0.80 bar** |
 | Is the geometry organised at all? | ✅ yes, against a shuffled null, every metric |
-| Is it organised by *stance*? | ✅ **AUC 0.875 across disjoint wording** — stance NMI 0.864 vs wording 0.339, subject 0.228 |
-| Replicated on a second model? | ✅ Gemma 3 4B — structure holds, stance far stronger |
+| Is it organised by *stance*? | ⚠️ **Gemma 3 yes** (AUC 0.875, stance NMI 0.864) · **Llama 3.1 no** (0.738 FAIL, subject outranks stance) |
+| Does the geometry predict the continuation? | ✅ all three models, 1.5–3.1× over chance |
+| Replicated across models? | structure ✅ on all three · stance ❌ **Gemma-3-specific** |
 
 ### What the geometry is organised by — honestly
 

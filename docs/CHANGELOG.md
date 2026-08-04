@@ -600,3 +600,59 @@ addressing memory, which is what this is for — but they are not the same claim
 
 Still owed: bootstrap CIs (a pass deserves the same rigour a fail got), a k sweep, and a
 non-Gemma model. Both models so far are Gemma.
+
+---
+
+## 2026-08-03 — Llama 3.1 FAILS the stance gate. It is a Gemma 3 result.
+
+Third model, first non-Gemma. `Meta-Llama-3.1-8B-Instruct-Q4_K_M`, 32 layers, d=4096.
+Verified answering correctly before measuring ("The official currency of Italy is the Euro").
+Same corpus construction, same pre-registered 0.80 bar.
+
+### Cross-wording AUC: FAIL at every layer
+
+| layer | AUC |
+|---|---:|
+| L12 | 0.7309 |
+| L20 | 0.7383 |
+| L28 | 0.7148 |
+
+### And the NMI ordering inverts
+
+| layer | stance | variant | subject |
+|---|---:|---:|---:|
+| L12 | 0.471 | 0.283 | 0.458 |
+| L20 | 0.465 | 0.276 | **0.506** |
+| L28 | 0.435 | 0.288 | **0.506** |
+
+Adjusted for achievable ceilings (k=9 clusters; stance 9 values caps near 1.0, subject 13
+values caps at 0.923): stance ~47%, subject ~55%. **Subject slightly wins.** The opposite of
+Gemma 3, where it was stance 0.86 against subject 0.23.
+
+### Where that leaves the headline
+
+Across three models:
+
+| model | cross-wording AUC | stance | subject |
+|---|---|---:|---:|
+| Gemma 3 4B | **0.875 PASS** | 0.864 | 0.228 |
+| Gemma 4 12B | not run | 0.360 | 0.345 |
+| Llama 3.1 8B | **0.738 FAIL** | 0.465 | 0.506 |
+
+**The stance result does not generalise.** It is a Gemma 3 finding, and the strength of it
+tracks something about the model rather than about language models. The caveat filed earlier
+— that Gemma 3 4B has unusually formulaic openings ("Okay, let's dive into…") — now looks
+load-bearing rather than decorative: templated openings plausibly *are* why stance dominates
+its first-token geometry.
+
+What survives all three models: **the geometry has structure** (every metric beats a
+per-dimension shuffled null on every model), and **something is encoded at the first
+generated token that predicts the continuation** (2.8–3.1× on Llama, the highest yet). What
+that something *is* varies by model.
+
+### Bug found and fixed
+
+`cmd_structure` and the decode gate hardcoded Gemma's EOS ids (`1, 106, 50`). Llama's turn
+ends at `<|eot_id|>` / `<|end_of_text|>`, so decodes ran past the end of the turn. EOS is now
+resolved from the tokenizer. This does **not** change the numbers above — capture is at
+depth 0, long before any EOS — but it corrupted the continuation strings.
