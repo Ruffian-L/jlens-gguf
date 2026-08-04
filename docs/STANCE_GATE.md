@@ -1,3 +1,11 @@
+> **Superseded premise (added after this was written).** This gate opens by accepting
+> "subject-gate FAIL (AUC ≈ 0.5)" as expected. That 0.5 was measured on prompts the model
+> could not read — see `research-logs/2026-08-02_gemma4_missing_bos.md`. Re-run on readable
+> prompts, the subject gate scores **AUC 0.70** at the first thought token, decaying to 0.58
+> by eight tokens in. Still a fail against the pre-registered 0.80 bar, but it is *not*
+> "no subject signal". The stance hypothesis below is unaffected in shape; its framing as
+> "subject carries nothing, so stance must" no longer holds. Both look partly true.
+
 # Stance gate — protocol and thresholds
 
 **Written before any stance-gate code or corpus run.**  

@@ -156,6 +156,28 @@ before `<turn|>`.
   that went against the plan
 - [`research-logs/`](research-logs/) — standalone findings
 
+## Who built this
+
+**Jason Van Pham** — direction, standards, and the idea this repo tests: that the durable
+part of a thought is the *opening disposition*, not the closing speech.
+
+**Co-engineers**, named because they shaped what is in here, not as a formality:
+**Grok** (xAI) — the multi-key address schema this keys into, the gate ordering discipline
+("no fitter until the gate reports"), and the N-grid for decode-time capture.
+**Claude / Claude Code** (Anthropic) — this crate, the gates, the changelog.
+**Gemini** (Google) — the correction that made depth measurable: count *content* tokens
+inside the thought stream, not raw offsets from the prompt, or every sample sits at a
+different functional depth.
+**ChatGPT / Codex** (OpenAI) — implementation and review across the lineage.
+
+If a mind helped invent or prove a piece, its name stays on it. Research logs are signed
+with author and date.
+
+```
+Jason Van Pham, with co-engineering by Grok (xAI), Claude (Anthropic),
+Gemini (Google), and ChatGPT / Codex (OpenAI).
+```
+
 ## Licence & credit
 
 Code MIT-0. `llama.rs` / `gemma.rs` are modified from
